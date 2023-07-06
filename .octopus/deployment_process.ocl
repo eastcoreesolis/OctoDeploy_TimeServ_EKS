@@ -1,0 +1,54 @@
+step "deploy-raw-kubernetes-yaml" {
+    name = "Deploy raw Kubernetes YAML"
+
+    action {
+        action_type = "Octopus.KubernetesDeployRawYaml"
+        properties = {
+            Octopus.Action.Kubernetes.DeploymentTimeout = "180"
+            Octopus.Action.Kubernetes.ResourceStatusCheck = "True"
+            Octopus.Action.KubernetesContainers.CustomResourceYaml = <<-EOT
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: my-app
+                spec:
+                  replicas: 3
+                  selector:
+                    matchLabels:
+                      app: my-app
+                  template:
+                    metadata:
+                      labels:
+                        app: my-app
+                    spec:
+                      containers:
+                        - name: my-app-container
+                          image: eastcoreesolis/timeserv:1
+                          ports:
+                            - containerPort: 8080
+                ---
+                apiVersion: v1
+                kind: Service
+                metadata:
+                  name: my-app-service
+                spec:
+                  selector:
+                    app: my-app
+                  ports:
+                    - protocol: TCP
+                      port: 80
+                      targetPort: 8080
+                
+                EOT
+            Octopus.Action.KubernetesContainers.Namespace = "Default"
+            Octopus.Action.Script.ScriptSource = "Inline"
+            OctopusUseBundledTooling = "False"
+        }
+        worker_pool = "static-worker-pool-01"
+
+        container {
+            feed = "docker-hub"
+            image = "mcr.microsoft.com/dotnet/runtime:7.0"
+        }
+    }
+}
